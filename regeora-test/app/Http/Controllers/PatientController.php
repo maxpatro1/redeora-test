@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Cache;
 
 class PatientController extends Controller
 {
+    private \PatientRepository $repository;
+
+    public function __construct(\PatientRepository $repository)
+    {
+        $this->repository = $repository;
+    }
+
     public function index(): AnonymousResourceCollection
     {
         $patients = Cache::get('patients_list');
@@ -25,19 +32,8 @@ class PatientController extends Controller
     {
         $validated = $request->validated();
         $patient = Patient::create($validated);
-        $this->addPatientToCache($patient);
+        $this->repository->addPatientToCache($patient);
         ProcessPatientJob::dispatch($patient);
         return new PatientResource($patient);
-    }
-
-    private function addPatientToCache(Patient $patient)
-    {
-        $patients = Cache::get('patients_list', collect());
-        if ($patients->isEmpty()) {
-            return $patients;
-        }
-        $patients->push($patient);
-        Cache::put('patients_list', $patients, 300);
-        return $patients;
     }
 }
